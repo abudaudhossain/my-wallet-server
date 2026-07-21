@@ -1,0 +1,5 @@
+export default ()=>({
+    db:{
+        databaseUrl:process.env.DATABASE_URL||'postgresql://postgres:password@localhost:5432/nest_db?schema=public'
+    }
+})
