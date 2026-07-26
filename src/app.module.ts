@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config'
 import configs from './config';
 import { validationSchema } from './config/validation';
 import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './iam/auth/auth.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -20,6 +21,7 @@ import { PrismaModule } from './prisma/prisma.module';
       expandVariables: true, 
     }),
     PrismaModule,
+    AuthModule
   ],
   controllers: [AppController],
   providers: [AppService],

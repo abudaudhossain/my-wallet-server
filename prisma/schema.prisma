@@ -13,6 +13,13 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  BLOCKED
+}
+
 model Role {
   id          Int      @id @default(autoincrement())
   key         String   @unique
@@ -51,12 +58,26 @@ model User {
   designation String?
   avatar      String?
   email       String   @unique
+  isVerified  Boolean  @default(false)
+  status      UserStatus   @default(PENDING)
   password    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   roleId      Int
   role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  verificationTokens VerificationToken[]
 
   @@index([email])
   @@index([roleId])
+}
+
+model VerificationToken {
+  id Int @id @default(autoincrement())
+  tokenHash String @unique
+  expiresAt DateTime
+  userId Int
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
