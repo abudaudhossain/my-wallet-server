@@ -4,6 +4,9 @@ import { UserServices } from "src/users/user.services";
 import { ROLES } from "src/iam/seeds/role";
 import { PasswordService } from "./password.service";
 import { RoleRepository } from "./role.repository";
+import { UserMapper } from "src/users/mappers/user.mapper";
+import { plainToInstance } from "class-transformer";
+import { UserResponseDto } from "src/users/dto/user-response.dto";
 
 @Injectable()
 export class AuthService {
@@ -35,6 +38,8 @@ export class AuthService {
                 },
             },
         });
-        return user;
+        return plainToInstance(UserResponseDto, UserMapper.toResponse( user),{
+            excludeExtraneousValues:true
+        });
     }
 }
