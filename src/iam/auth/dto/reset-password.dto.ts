@@ -1,5 +1,4 @@
 import {
-  IsEmail,
   IsNotEmpty,
   IsString,
   Matches,
@@ -8,17 +7,10 @@ import {
 } from 'class-validator';
 import { Match } from 'src/common/decorators/match.decorator';
 
-export class RegisterDto {
-  @IsString({ message: 'Name must be a string' })
-  @IsNotEmpty({ message: 'Name is required' })
-  @MinLength(2, { message: 'Name must be at least 2 characters long' })
-  @MaxLength(100, { message: 'Name must not exceed 100 characters' })
-  name!: string;
-
-  @IsEmail({}, { message: 'Invalid email address' })
-  @IsNotEmpty({ message: 'Email is required' })
-  @MaxLength(255, { message: 'Email must not exceed 255 characters' })
-  email!: string;
+export class ResetPasswordDto {
+  @IsString({ message: 'Token must be a string' })
+  @IsNotEmpty({ message: 'Reset token is required' })
+  token!: string;
 
   @IsString({ message: 'Password must be a string' })
   @IsNotEmpty({ message: 'Password is required' })

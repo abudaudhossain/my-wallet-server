@@ -7,11 +7,10 @@ export class UserRepository {
     constructor(private readonly prisma:PrismaService){}
 
     async findUnique(where: Prisma.UserWhereUniqueInput): Promise<User | null> {
-        console.log(where)
         return this.prisma.user.findUnique({ where, include: { role: true } });
     }
 
-    async findMany(options:{
+    async findMany(options:{ 
         where?: Prisma.UserWhereInput;
         orderBy?: Prisma.UserOrderByWithRelationInput;
         skip?: number;

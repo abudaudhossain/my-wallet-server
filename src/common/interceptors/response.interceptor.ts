@@ -10,7 +10,6 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>
 
     intercept(context: ExecutionContext, next: CallHandler<T>): Observable<ApiResponse<T>> | Promise<Observable<ApiResponse<T>>> {
         const request = context.switchToHttp().getRequest();
-        console.log("request")
         const message = this.reflector.get<string>(RESPONSE_MESSAGE, context.getHandler()) || DEFAULT_RESPONSE_MESSAGE;
 
         return next.handle().pipe(

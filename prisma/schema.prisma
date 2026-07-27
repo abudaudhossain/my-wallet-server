@@ -20,14 +20,19 @@ enum UserStatus {
   BLOCKED
 }
 
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
 model Role {
-  id          Int      @id @default(autoincrement())
-  key         String   @unique
+  id          Int              @id @default(autoincrement())
+  key         String           @unique
   label       String
   description String?
-  isSystem    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isSystem    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   users       User[]
   permissions RolePermission[]
 }
@@ -53,31 +58,50 @@ model RolePermission {
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
-  name        String?
-  designation String?
-  avatar      String?
-  email       String   @unique
-  isVerified  Boolean  @default(false)
-  status      UserStatus   @default(PENDING)
-  password    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  roleId      Int
-  role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  id                Int                 @id @default(autoincrement())
+  name              String?
+  designation       String?
+  avatar            String?
+  email             String              @unique
+  isVerified        Boolean             @default(false)
+  status            UserStatus          @default(PENDING)
+  password          String
+  passwordChangedAt DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  roleId            Int
+  role              Role                @relation(fields: [roleId], references: [id], onDelete: Cascade)
   verificationTokens VerificationToken[]
+  refreshTokens     RefreshToken[]
 
   @@index([email])
   @@index([roleId])
 }
 
 model VerificationToken {
-  id Int @id @default(autoincrement())
-  tokenHash String @unique
+  id        Int       @id @default(autoincrement())
+  tokenHash String    @unique
+  type      TokenType
   expiresAt DateTime
-  userId Int
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  usedAt    DateTime?
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([type, userId])
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
 
   @@index([userId])
 }
