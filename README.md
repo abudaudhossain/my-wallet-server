@@ -1,98 +1,144 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# My Wallet — Server
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS API for a personal wallet app. Users can authenticate, manage cards, and record expense/deposit transactions that update card balances.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+- NestJS 11 + TypeScript
+- PostgreSQL + Prisma
+- JWT auth (access + refresh tokens)
+- Argon2 password hashing
+- Nodemailer (emails logged to console when mail is unset)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## Getting started
 
 ```bash
-$ npm install
+npm install
+cp .env.example .env
+# Edit .env with your database and JWT secrets
+
+npx prisma migrate dev
+npx prisma generate
+npm run prisma:seed   # optional — roles & permissions
+
+npm run start:dev
 ```
 
-## Compile and run the project
+Server defaults to `http://localhost:3000`.
+
+## Environment
+
+Copy `.env.example` and set:
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `PORT` | HTTP port (default `3000`) |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | Min 32 characters each |
+| `JWT_ACCESS_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN` | e.g. `15m`, `7d` |
+| `FRONTEND_URL` | Used in email verification / reset links |
+| `MAIL_*` | Optional SMTP settings |
+
+## Auth
+
+Protected routes expect:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/auth/register` | Register (`name`, `email`, `password`, `confirmPassword`) |
+| `POST` | `/auth/login` | Login — returns user + access/refresh tokens |
+| `POST` | `/auth/refresh` | Refresh tokens (`refreshToken`) |
+| `POST` | `/auth/logout` | Revoke refresh token |
+| `POST` | `/auth/verify-email` | Verify email (`token`) |
+| `POST` | `/auth/resend-verification` | Resend verification email (`email`) |
+| `POST` | `/auth/forgot-password` | Request password reset (`email`) |
+| `POST` | `/auth/reset-password` | Reset password (`token`, `password`, `confirmPassword`) |
+
+## Cards
+
+JWT required. Users only access their own cards. Create/update accept `name` and `description` only; `balance` defaults to `0`.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/cards` | Create card |
+| `GET` | `/cards` | List own cards |
+| `GET` | `/cards/:id` | Get one card |
+| `PATCH` | `/cards/:id` | Update name/description |
+| `DELETE` | `/cards/:id` | Delete card |
+
+**Create / update body**
+
+```json
+{
+  "name": "Main wallet",
+  "description": "Daily spending"
+}
+```
+
+## Transactions
+
+JWT required. `cardId` must belong to the authenticated user.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/transactions` | Create transaction |
+| `GET` | `/transactions` | List own transactions (`?cardId=` optional) |
+| `GET` | `/transactions/:id` | Get one transaction |
+| `PATCH` | `/transactions/:id` | Update transaction |
+| `DELETE` | `/transactions/:id` | Delete transaction |
+
+**Create body**
+
+```json
+{
+  "type": "DEPOSIT",
+  "amount": 100.5,
+  "narration": "Salary",
+  "date": "2026-07-27T10:00:00.000Z",
+  "cardId": 1
+}
+```
+
+| Field | Notes |
+|-------|--------|
+| `type` | `EXPENSE` or `DEPOSIT` |
+| `amount` | Positive number, up to 2 decimal places |
+| `narration` | Optional |
+| `date` | Optional ISO date; defaults to now |
+| `cardId` | Required; must be your card |
+
+**Balance rules**
+
+- `DEPOSIT` increases card balance
+- `EXPENSE` decreases card balance (rejected if insufficient funds)
+- Update/delete reverse and re-apply balance changes atomically
+
+## Scripts
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run start:dev      # watch mode
+npm run start:prod     # production
+npm run build
+npm run lint
+npm run test
+npm run prisma:seed
 ```
 
-## Run tests
+## Project structure
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
 ```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+src/
+  iam/auth/        # Auth, JWT, tokens
+  cards/           # Card CRUD
+  transactions/    # Transaction CRUD + balance updates
+  users/           # User repository/service
+  mail/            # Email service
+  prisma/          # Prisma module
+prisma/
+  schema.prisma
+  migrations/
 ```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
