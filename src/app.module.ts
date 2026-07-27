@@ -8,6 +8,8 @@ import { validationSchema } from './config/validation';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './iam/auth/auth.module';
 import { MailModule } from './mail/mail.module';
+import { CardsModule } from './cards/cards.module';
+import { TransactionsModule } from './transactions/transactions.module';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { MailModule } from './mail/mail.module';
     PrismaModule,
     MailModule,
     AuthModule,
+    CardsModule,
+    TransactionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

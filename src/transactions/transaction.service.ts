@@ -1,0 +1,195 @@
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  Card,
+  Prisma,
+  TransactionType,
+} from 'src/generated/prisma/client';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { TRANSACTION_MESSAGES } from './constants/transaction.constants';
+import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { TransactionMapper } from './mappers/transaction.mapper';
+import { TransactionRepository } from './transaction.repository';
+
+@Injectable()
+export class TransactionService {
+  constructor(
+    private readonly transactionRepository: TransactionRepository,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  async create(userId: number, dto: CreateTransactionDto) {
+    const card = await this.findOwnedCard(userId, dto.cardId);
+    const signedAmount = this.toSignedAmount(dto.type, dto.amount);
+    this.assertSufficientBalance(card, signedAmount);
+
+    const transaction = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.transaction.create({
+        data: {
+          type: dto.type,
+          amount: new Prisma.Decimal(dto.amount),
+          narration: dto.narration,
+          date: dto.date ? new Date(dto.date) : new Date(),
+          card: { connect: { id: dto.cardId } },
+          user: { connect: { id: userId } },
+        },
+      });
+
+      await tx.card.update({
+        where: { id: dto.cardId },
+        data: { balance: { increment: signedAmount } },
+      });
+
+      return created;
+    });
+
+    return TransactionMapper.toResponse(transaction);
+  }
+
+  async findAll(userId: number, cardId?: number) {
+    const transactions = await this.transactionRepository.findMany({
+      where: {
+        userId,
+        ...(cardId !== undefined && { cardId }),
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    return TransactionMapper.toResponseList(transactions);
+  }
+
+  async findOne(userId: number, id: number) {
+    const transaction = await this.findOwnedTransaction(userId, id);
+    return TransactionMapper.toResponse(transaction);
+  }
+
+  async update(userId: number, id: number, dto: UpdateTransactionDto) {
+    const existing = await this.findOwnedTransaction(userId, id);
+
+    const nextType = dto.type ?? existing.type;
+    const nextAmount =
+      dto.amount !== undefined
+        ? dto.amount
+        : Number(existing.amount.toString());
+    const nextCardId = dto.cardId ?? existing.cardId;
+
+    const nextCard = await this.findOwnedCard(userId, nextCardId);
+
+    const oldSigned = this.toSignedAmount(
+      existing.type,
+      Number(existing.amount.toString()),
+    );
+    const newSigned = this.toSignedAmount(nextType, nextAmount);
+
+    if (nextCardId === existing.cardId) {
+      const projected = Number(nextCard.balance.toString()) - oldSigned + newSigned;
+      if (projected < 0) {
+        throw new BadRequestException(TRANSACTION_MESSAGES.INSUFFICIENT_BALANCE);
+      }
+    } else {
+      const oldCard = await this.findOwnedCard(userId, existing.cardId);
+      const oldProjected = Number(oldCard.balance.toString()) - oldSigned;
+      if (oldProjected < 0) {
+        throw new BadRequestException(TRANSACTION_MESSAGES.INSUFFICIENT_BALANCE);
+      }
+      this.assertSufficientBalance(nextCard, newSigned);
+    }
+
+    const transaction = await this.prisma.$transaction(async (tx) => {
+      if (nextCardId === existing.cardId) {
+        await tx.card.update({
+          where: { id: existing.cardId },
+          data: { balance: { increment: newSigned - oldSigned } },
+        });
+      } else {
+        await tx.card.update({
+          where: { id: existing.cardId },
+          data: { balance: { increment: -oldSigned } },
+        });
+        await tx.card.update({
+          where: { id: nextCardId },
+          data: { balance: { increment: newSigned } },
+        });
+      }
+
+      return tx.transaction.update({
+        where: { id },
+        data: {
+          ...(dto.type !== undefined && { type: dto.type }),
+          ...(dto.amount !== undefined && {
+            amount: new Prisma.Decimal(dto.amount),
+          }),
+          ...(dto.narration !== undefined && { narration: dto.narration }),
+          ...(dto.date !== undefined && { date: new Date(dto.date) }),
+          ...(dto.cardId !== undefined && {
+            card: { connect: { id: dto.cardId } },
+          }),
+        },
+      });
+    });
+
+    return TransactionMapper.toResponse(transaction);
+  }
+
+  async remove(userId: number, id: number) {
+    const existing = await this.findOwnedTransaction(userId, id);
+    const signedAmount = this.toSignedAmount(
+      existing.type,
+      Number(existing.amount.toString()),
+    );
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.card.update({
+        where: { id: existing.cardId },
+        data: { balance: { increment: -signedAmount } },
+      });
+      await tx.transaction.delete({ where: { id } });
+    });
+
+    return null;
+  }
+
+  private async findOwnedTransaction(userId: number, id: number) {
+    const transaction = await this.transactionRepository.findFirst({
+      id,
+      userId,
+    });
+
+    if (!transaction) {
+      throw new NotFoundException(TRANSACTION_MESSAGES.NOT_FOUND);
+    }
+
+    return transaction;
+  }
+
+  private async findOwnedCard(userId: number, cardId: number): Promise<Card> {
+    const card = await this.prisma.card.findFirst({
+      where: { id: cardId, userId },
+    });
+
+    if (!card) {
+      throw new NotFoundException(TRANSACTION_MESSAGES.CARD_NOT_FOUND);
+    }
+
+    return card;
+  }
+
+  private toSignedAmount(type: TransactionType, amount: number): number {
+    return type === TransactionType.DEPOSIT ? amount : -amount;
+  }
+
+  private assertSufficientBalance(card: Card, signedAmount: number) {
+    if (signedAmount >= 0) {
+      return;
+    }
+
+    const balance = Number(card.balance.toString());
+    if (balance + signedAmount < 0) {
+      throw new BadRequestException(TRANSACTION_MESSAGES.INSUFFICIENT_BALANCE);
+    }
+  }
+}

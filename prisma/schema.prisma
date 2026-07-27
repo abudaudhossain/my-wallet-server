@@ -25,6 +25,11 @@ enum TokenType {
   PASSWORD_RESET
 }
 
+enum TransactionType {
+  EXPENSE
+  DEPOSIT
+}
+
 model Role {
   id          Int              @id @default(autoincrement())
   key         String           @unique
@@ -73,6 +78,8 @@ model User {
   role              Role                @relation(fields: [roleId], references: [id], onDelete: Cascade)
   verificationTokens VerificationToken[]
   refreshTokens     RefreshToken[]
+  cards             Card[]
+  transactions      Transaction[]
 
   @@index([email])
   @@index([roleId])
@@ -104,4 +111,37 @@ model RefreshToken {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+
+model Card {
+  id           Int           @id @default(autoincrement())
+  name         String
+  description  String?       @db.Text
+  balance      Decimal       @default(0) @db.Decimal(18, 2)
+  userId       Int
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model Transaction {
+  id        Int             @id @default(autoincrement())
+  type      TransactionType
+  amount    Decimal         @db.Decimal(18, 2)
+  narration String?
+  date      DateTime        @default(now())
+  cardId    Int
+  card      Card            @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([cardId])
+  @@index([date])
 }
