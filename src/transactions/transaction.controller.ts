@@ -29,6 +29,8 @@ import { FindTransactionsQueryDto } from './dto/find-transactions-query.dto';
 import { PaginatedTransactionsResponseDto } from './dto/paginated-transactions-response.dto';
 import { TransactionResponseDto } from './dto/transaction-response.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { WeeklySummaryQueryDto } from './dto/weekly-summary-query.dto';
+import { WeeklySummaryResponseDto } from './dto/weekly-summary-response.dto';
 import { TransactionService } from './transaction.service';
 
 @ApiTags('Transactions')
@@ -60,6 +62,20 @@ export class TransactionController {
     @Query() query: FindTransactionsQueryDto,
   ) {
     return this.transactionService.findAll(user.id, query);
+  }
+
+  @Get('summary/weekly')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get weekly deposit, expense, and net balance summary',
+  })
+  @ApiOkResponse({ type: WeeklySummaryResponseDto })
+  @ResponseMessage(TRANSACTION_MESSAGES.WEEKLY_SUMMARY_FETCHED)
+  getWeeklySummary(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: WeeklySummaryQueryDto,
+  ) {
+    return this.transactionService.getWeeklySummary(user.id, query);
   }
 
   @Get(':id')

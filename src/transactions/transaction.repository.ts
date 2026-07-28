@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, Transaction } from 'src/generated/prisma/client';
+import { Prisma, Transaction, TransactionType } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   TRANSACTION_DETAIL_INCLUDE,
@@ -42,6 +42,28 @@ export class TransactionRepository {
 
   async count(where?: Prisma.TransactionWhereInput): Promise<number> {
     return this.prisma.transaction.count({ where });
+  }
+
+  async sumAmountByType(
+    where: Prisma.TransactionWhereInput,
+  ): Promise<
+    Array<{ type: TransactionType; _sum: { amount: Prisma.Decimal | null } }>
+  > {
+    const [deposit, expense] = await Promise.all([
+      this.prisma.transaction.aggregate({
+        where: { ...where, type: TransactionType.DEPOSIT },
+        _sum: { amount: true },
+      }),
+      this.prisma.transaction.aggregate({
+        where: { ...where, type: TransactionType.EXPENSE },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    return [
+      { type: TransactionType.DEPOSIT, _sum: deposit._sum },
+      { type: TransactionType.EXPENSE, _sum: expense._sum },
+    ];
   }
 
   async create(

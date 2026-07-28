@@ -14,6 +14,8 @@ import { TRANSACTION_MESSAGES } from './constants/transaction.constants';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { FindTransactionsQueryDto } from './dto/find-transactions-query.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { WeeklySummaryQueryDto } from './dto/weekly-summary-query.dto';
+import { WeeklySummaryResponseDto } from './dto/weekly-summary-response.dto';
 import {
   TRANSACTION_DETAIL_INCLUDE,
   TransactionMapper,
@@ -95,6 +97,37 @@ export class TransactionService {
   async findOne(userId: number, id: number) {
     const transaction = await this.findOwnedTransaction(userId, id);
     return TransactionMapper.toResponse(transaction);
+  }
+
+  async getWeeklySummary(
+    userId: number,
+    query: WeeklySummaryQueryDto,
+  ): Promise<WeeklySummaryResponseDto> {
+    if (query.cardId !== undefined) {
+      await this.findOwnedCard(userId, query.cardId);
+    }
+
+    const { weekStart, weekEnd } = this.getWeekRange(
+      query.date ? new Date(query.date) : new Date(),
+    );
+
+    const totals = await this.transactionRepository.sumAmountByType({
+      userId,
+      ...(query.cardId !== undefined && { cardId: query.cardId }),
+      date: { gte: weekStart, lte: weekEnd },
+    });
+
+    const deposit = this.getSumForType(totals, TransactionType.DEPOSIT);
+    const expense = this.getSumForType(totals, TransactionType.EXPENSE);
+    const balance = deposit - expense;
+
+    return {
+      weekStart,
+      weekEnd,
+      deposit: deposit.toFixed(2),
+      expense: expense.toFixed(2),
+      balance: balance.toFixed(2),
+    };
   }
 
   async update(userId: number, id: number, dto: UpdateTransactionDto) {
@@ -222,5 +255,43 @@ export class TransactionService {
     if (balance + signedAmount < 0) {
       throw new BadRequestException(TRANSACTION_MESSAGES.INSUFFICIENT_BALANCE);
     }
+  }
+
+  /** ISO week: Monday 00:00:00.000 UTC → Sunday 23:59:59.999 UTC */
+  private getWeekRange(referenceDate: Date): {
+    weekStart: Date;
+    weekEnd: Date;
+  } {
+    console.log('referenceDate', referenceDate);
+    const date = new Date(
+      Date.UTC(
+        referenceDate.getUTCFullYear(),
+        referenceDate.getUTCMonth(),
+        referenceDate.getUTCDate(),
+      ),
+    );
+    const day = date.getUTCDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    date.setUTCDate(date.getUTCDate() + diffToMonday);
+
+    const weekStart = new Date(date);
+    weekStart.setUTCHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+    weekEnd.setUTCHours(23, 59, 59, 999);
+
+    return { weekStart, weekEnd };
+  }
+
+  private getSumForType(
+    totals: Array<{
+      type: TransactionType;
+      _sum: { amount: Prisma.Decimal | null };
+    }>,
+    type: TransactionType,
+  ): number {
+    const match = totals.find((row) => row.type === type);
+    return match?._sum.amount ? Number(match._sum.amount.toString()) : 0;
   }
 }

@@ -4,6 +4,7 @@ export const TRANSACTION_MESSAGES = {
   DELETED: 'Transaction deleted successfully',
   FETCHED: 'Transaction fetched successfully',
   FETCHED_ALL: 'Transactions fetched successfully',
+  WEEKLY_SUMMARY_FETCHED: 'Weekly transaction summary fetched successfully',
   NOT_FOUND: 'Transaction not found',
   CARD_NOT_FOUND: 'Card not found',
   INSUFFICIENT_BALANCE: 'Insufficient card balance',
