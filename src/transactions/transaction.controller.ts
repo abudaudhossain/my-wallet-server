@@ -12,15 +12,26 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ResponseMessage } from 'src/common/decorators/response-message.decorator';
 import { CurrentUser } from 'src/iam/auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from 'src/iam/auth/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from 'src/iam/auth/interfaces/jwt-payload.interface';
 import { TRANSACTION_MESSAGES } from './constants/transaction.constants';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { TransactionResponseDto } from './dto/transaction-response.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { TransactionService } from './transaction.service';
 
+@ApiTags('Transactions')
+@ApiBearerAuth('access-token')
 @Controller('transactions')
 @UseGuards(JwtAuthGuard)
 export class TransactionController {
@@ -28,6 +39,8 @@ export class TransactionController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a transaction' })
+  @ApiCreatedResponse({ type: TransactionResponseDto })
   @ResponseMessage(TRANSACTION_MESSAGES.CREATED)
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -38,6 +51,14 @@ export class TransactionController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List transactions for the current user' })
+  @ApiQuery({
+    name: 'cardId',
+    required: false,
+    type: Number,
+    description: 'Filter transactions by card ID',
+  })
+  @ApiOkResponse({ type: TransactionResponseDto, isArray: true })
   @ResponseMessage(TRANSACTION_MESSAGES.FETCHED_ALL)
   findAll(
     @CurrentUser() user: AuthenticatedUser,
@@ -48,6 +69,8 @@ export class TransactionController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get a transaction by ID' })
+  @ApiOkResponse({ type: TransactionResponseDto })
   @ResponseMessage(TRANSACTION_MESSAGES.FETCHED)
   findOne(
     @CurrentUser() user: AuthenticatedUser,
@@ -58,6 +81,8 @@ export class TransactionController {
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update a transaction' })
+  @ApiOkResponse({ type: TransactionResponseDto })
   @ResponseMessage(TRANSACTION_MESSAGES.UPDATED)
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -69,6 +94,8 @@ export class TransactionController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a transaction' })
+  @ApiOkResponse({ description: 'Transaction deleted successfully' })
   @ResponseMessage(TRANSACTION_MESSAGES.DELETED)
   remove(
     @CurrentUser() user: AuthenticatedUser,
