@@ -17,7 +17,6 @@ import {
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { ResponseMessage } from 'src/common/decorators/response-message.decorator';
@@ -26,6 +25,8 @@ import { JwtAuthGuard } from 'src/iam/auth/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from 'src/iam/auth/interfaces/jwt-payload.interface';
 import { TRANSACTION_MESSAGES } from './constants/transaction.constants';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { FindTransactionsQueryDto } from './dto/find-transactions-query.dto';
+import { PaginatedTransactionsResponseDto } from './dto/paginated-transactions-response.dto';
 import { TransactionResponseDto } from './dto/transaction-response.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { TransactionService } from './transaction.service';
@@ -52,19 +53,13 @@ export class TransactionController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'List transactions for the current user' })
-  @ApiQuery({
-    name: 'cardId',
-    required: false,
-    type: Number,
-    description: 'Filter transactions by card ID',
-  })
-  @ApiOkResponse({ type: TransactionResponseDto, isArray: true })
+  @ApiOkResponse({ type: PaginatedTransactionsResponseDto })
   @ResponseMessage(TRANSACTION_MESSAGES.FETCHED_ALL)
   findAll(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('cardId', new ParseIntPipe({ optional: true })) cardId?: number,
+    @Query() query: FindTransactionsQueryDto,
   ) {
-    return this.transactionService.findAll(user.id, cardId);
+    return this.transactionService.findAll(user.id, query);
   }
 
   @Get(':id')

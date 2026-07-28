@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Transaction } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import {
+  TRANSACTION_DETAIL_INCLUDE,
+  type TransactionWithDetails,
+} from './mappers/transaction.mapper';
 
 @Injectable()
 export class TransactionRepository {
@@ -14,29 +18,50 @@ export class TransactionRepository {
 
   async findFirst(
     where: Prisma.TransactionWhereInput,
-  ): Promise<Transaction | null> {
-    return this.prisma.transaction.findFirst({ where });
+  ): Promise<TransactionWithDetails | null> {
+    return this.prisma.transaction.findFirst({
+      where,
+      include: TRANSACTION_DETAIL_INCLUDE,
+    });
   }
 
   async findMany(options: {
     where?: Prisma.TransactionWhereInput;
     orderBy?: Prisma.TransactionOrderByWithRelationInput;
-  }): Promise<Transaction[]> {
+    skip?: number;
+    take?: number;
+  }): Promise<TransactionWithDetails[]> {
     return this.prisma.transaction.findMany({
       where: options.where,
       orderBy: options.orderBy,
+      skip: options.skip,
+      take: options.take,
+      include: TRANSACTION_DETAIL_INCLUDE,
     });
   }
 
-  async create(data: Prisma.TransactionCreateInput): Promise<Transaction> {
-    return this.prisma.transaction.create({ data });
+  async count(where?: Prisma.TransactionWhereInput): Promise<number> {
+    return this.prisma.transaction.count({ where });
+  }
+
+  async create(
+    data: Prisma.TransactionCreateInput,
+  ): Promise<TransactionWithDetails> {
+    return this.prisma.transaction.create({
+      data,
+      include: TRANSACTION_DETAIL_INCLUDE,
+    });
   }
 
   async update(
     where: Prisma.TransactionWhereUniqueInput,
     data: Prisma.TransactionUpdateInput,
-  ): Promise<Transaction> {
-    return this.prisma.transaction.update({ where, data });
+  ): Promise<TransactionWithDetails> {
+    return this.prisma.transaction.update({
+      where,
+      data,
+      include: TRANSACTION_DETAIL_INCLUDE,
+    });
   }
 
   async delete(

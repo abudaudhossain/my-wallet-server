@@ -27,9 +27,17 @@ export class TransactionResponseDto {
   @Expose()
   cardId!: number;
 
+  @ApiProperty({ example: 'Main Wallet' })
+  @Expose()
+  cardName!: string;
+
   @ApiProperty({ example: 1 })
   @Expose()
   userId!: number;
+
+  @ApiProperty({ example: 'John Doe', nullable: true })
+  @Expose()
+  userName!: string | null;
 
   @ApiProperty({ example: '2026-01-01T00:00:00.000Z' })
   @Expose()

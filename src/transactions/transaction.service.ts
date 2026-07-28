@@ -8,11 +8,16 @@ import {
   Prisma,
   TransactionType,
 } from 'src/generated/prisma/client';
+import { createPaginatedResponse } from 'src/common/dto/paginated-response.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { TRANSACTION_MESSAGES } from './constants/transaction.constants';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { FindTransactionsQueryDto } from './dto/find-transactions-query.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
-import { TransactionMapper } from './mappers/transaction.mapper';
+import {
+  TRANSACTION_DETAIL_INCLUDE,
+  TransactionMapper,
+} from './mappers/transaction.mapper';
 import { TransactionRepository } from './transaction.repository';
 
 @Injectable()
@@ -37,6 +42,7 @@ export class TransactionService {
           card: { connect: { id: dto.cardId } },
           user: { connect: { id: userId } },
         },
+        include: TRANSACTION_DETAIL_INCLUDE,
       });
 
       await tx.card.update({
@@ -50,16 +56,40 @@ export class TransactionService {
     return TransactionMapper.toResponse(transaction);
   }
 
-  async findAll(userId: number, cardId?: number) {
-    const transactions = await this.transactionRepository.findMany({
-      where: {
-        userId,
-        ...(cardId !== undefined && { cardId }),
-      },
-      orderBy: { date: 'desc' },
-    });
+  async findAll(userId: number, query: FindTransactionsQueryDto) {
+    const { page, limit, cardId, from, to } = query;
 
-    return TransactionMapper.toResponseList(transactions);
+    if (from && to && new Date(from) > new Date(to)) {
+      throw new BadRequestException(TRANSACTION_MESSAGES.INVALID_DATE_RANGE);
+    }
+
+    const where: Prisma.TransactionWhereInput = {
+      userId,
+      ...(cardId !== undefined && { cardId }),
+      ...((from || to) && {
+        date: {
+          ...(from && { gte: new Date(from) }),
+          ...(to && { lte: new Date(to) }),
+        },
+      }),
+    };
+
+    const [transactions, total] = await Promise.all([
+      this.transactionRepository.findMany({
+        where,
+        orderBy: { date: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.transactionRepository.count(where),
+    ]);
+
+    return createPaginatedResponse(
+      TransactionMapper.toResponseList(transactions),
+      total,
+      page,
+      limit,
+    );
   }
 
   async findOne(userId: number, id: number) {
@@ -129,6 +159,7 @@ export class TransactionService {
             card: { connect: { id: dto.cardId } },
           }),
         },
+        include: TRANSACTION_DETAIL_INCLUDE,
       });
     });
 

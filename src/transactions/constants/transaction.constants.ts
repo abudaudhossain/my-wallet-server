@@ -7,4 +7,5 @@ export const TRANSACTION_MESSAGES = {
   NOT_FOUND: 'Transaction not found',
   CARD_NOT_FOUND: 'Card not found',
   INSUFFICIENT_BALANCE: 'Insufficient card balance',
+  INVALID_DATE_RANGE: 'From date must be before or equal to to date',
 } as const;
