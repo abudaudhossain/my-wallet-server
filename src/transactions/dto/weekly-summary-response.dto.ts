@@ -11,6 +11,13 @@ export class WeeklySummaryResponseDto {
   weekEnd!: Date;
 
   @ApiProperty({
+    example: 'July-4',
+    description: 'Month-week label (monthName-weekNo)',
+  })
+  @Expose()
+  label!: string;
+
+  @ApiProperty({
     example: '1250.00',
     description: 'Total DEPOSIT amount for the week',
   })

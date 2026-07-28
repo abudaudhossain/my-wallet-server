@@ -25,10 +25,16 @@ import { JwtAuthGuard } from 'src/iam/auth/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from 'src/iam/auth/interfaces/jwt-payload.interface';
 import { TRANSACTION_MESSAGES } from './constants/transaction.constants';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { CurrentStatusSummaryQueryDto } from './dto/current-status-summary-query.dto';
+import { CurrentStatusSummaryResponseDto } from './dto/current-status-summary-response.dto';
 import { FindTransactionsQueryDto } from './dto/find-transactions-query.dto';
+import { MonthlySummaryListQueryDto } from './dto/monthly-summary-list-query.dto';
+import { MonthlySummaryQueryDto } from './dto/monthly-summary-query.dto';
+import { MonthlySummaryResponseDto } from './dto/monthly-summary-response.dto';
 import { PaginatedTransactionsResponseDto } from './dto/paginated-transactions-response.dto';
 import { TransactionResponseDto } from './dto/transaction-response.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { WeeklySummaryListQueryDto } from './dto/weekly-summary-list-query.dto';
 import { WeeklySummaryQueryDto } from './dto/weekly-summary-query.dto';
 import { WeeklySummaryResponseDto } from './dto/weekly-summary-response.dto';
 import { TransactionService } from './transaction.service';
@@ -62,6 +68,62 @@ export class TransactionController {
     @Query() query: FindTransactionsQueryDto,
   ) {
     return this.transactionService.findAll(user.id, query);
+  }
+
+  @Get('summary/status')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get current status summary (total deposit, expense, and balance)',
+  })
+  @ApiOkResponse({ type: CurrentStatusSummaryResponseDto })
+  @ResponseMessage(TRANSACTION_MESSAGES.CURRENT_STATUS_SUMMARY_FETCHED)
+  getCurrentStatusSummary(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: CurrentStatusSummaryQueryDto,
+  ) {
+    return this.transactionService.getCurrentStatusSummary(user.id, query);
+  }
+
+  @Get('summary/monthly/list')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List monthly deposit, expense, and net balance summaries',
+  })
+  @ApiOkResponse({ type: MonthlySummaryResponseDto, isArray: true })
+  @ResponseMessage(TRANSACTION_MESSAGES.MONTHLY_SUMMARY_LIST_FETCHED)
+  getMonthlySummaryList(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: MonthlySummaryListQueryDto,
+  ) {
+    return this.transactionService.getMonthlySummaryList(user.id, query);
+  }
+
+  @Get('summary/monthly')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get monthly deposit, expense, and net balance summary',
+  })
+  @ApiOkResponse({ type: MonthlySummaryResponseDto })
+  @ResponseMessage(TRANSACTION_MESSAGES.MONTHLY_SUMMARY_FETCHED)
+  getMonthlySummary(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: MonthlySummaryQueryDto,
+  ) {
+    return this.transactionService.getMonthlySummary(user.id, query);
+  }
+
+  @Get('summary/weekly/list')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List weekly deposit, expense, and net balance summaries',
+  })
+  @ApiOkResponse({ type: WeeklySummaryResponseDto, isArray: true })
+  @ResponseMessage(TRANSACTION_MESSAGES.WEEKLY_SUMMARY_LIST_FETCHED)
+  getWeeklySummaryList(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: WeeklySummaryListQueryDto,
+  ) {
+    return this.transactionService.getWeeklySummaryList(user.id, query);
   }
 
   @Get('summary/weekly')

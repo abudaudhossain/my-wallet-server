@@ -66,6 +66,21 @@ export class TransactionRepository {
     ];
   }
 
+  async findAmountsInRange(
+    where: Prisma.TransactionWhereInput,
+    from: Date,
+    to: Date,
+  ): Promise<Array<{ type: TransactionType; amount: Prisma.Decimal; date: Date }>> {
+    return this.prisma.transaction.findMany({
+      where: {
+        ...where,
+        date: { gte: from, lte: to },
+      },
+      select: { type: true, amount: true, date: true },
+      orderBy: { date: 'asc' },
+    });
+  }
+
   async create(
     data: Prisma.TransactionCreateInput,
   ): Promise<TransactionWithDetails> {
