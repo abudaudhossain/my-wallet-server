@@ -65,7 +65,7 @@ export class TransactionService {
   }
 
   async findAll(userId: number, query: FindTransactionsQueryDto) {
-    const { page, limit, cardId, from, to } = query;
+    const { page, limit, cardId, from, to, sortBy, sortOrder } = query;
 
     if (from && to && new Date(from) > new Date(to)) {
       throw new BadRequestException(TRANSACTION_MESSAGES.INVALID_DATE_RANGE);
@@ -85,7 +85,7 @@ export class TransactionService {
     const [transactions, total] = await Promise.all([
       this.transactionRepository.findMany({
         where,
-        orderBy: { date: 'desc' },
+        orderBy: [{ [sortBy]: sortOrder }, { id: sortOrder }],
         skip: (page - 1) * limit,
         take: limit,
       }),

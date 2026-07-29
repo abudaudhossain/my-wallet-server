@@ -27,7 +27,9 @@ export class TransactionRepository {
 
   async findMany(options: {
     where?: Prisma.TransactionWhereInput;
-    orderBy?: Prisma.TransactionOrderByWithRelationInput;
+    orderBy?:
+      | Prisma.TransactionOrderByWithRelationInput
+      | Prisma.TransactionOrderByWithRelationInput[];
     skip?: number;
     take?: number;
   }): Promise<TransactionWithDetails[]> {
@@ -37,7 +39,7 @@ export class TransactionRepository {
       skip: options.skip,
       take: options.take,
       include: TRANSACTION_DETAIL_INCLUDE,
-    });
+    }); 
   }
 
   async count(where?: Prisma.TransactionWhereInput): Promise<number> {

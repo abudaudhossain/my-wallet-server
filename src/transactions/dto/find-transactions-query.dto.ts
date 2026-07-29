@@ -1,7 +1,18 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, Min } from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsOptional, Min } from 'class-validator';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+
+export enum TransactionSortBy {
+  DATE = 'date',
+  AMOUNT = 'amount',
+  CREATED_AT = 'createdAt',
+}
+
+export enum SortOrder {
+  ASC = 'asc',
+  DESC = 'desc',
+}
 
 export class FindTransactionsQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
@@ -29,4 +40,26 @@ export class FindTransactionsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsDateString({}, { message: 'To must be a valid ISO date string' })
   to?: string;
+
+  @ApiPropertyOptional({
+    enum: TransactionSortBy,
+    example: TransactionSortBy.DATE,
+    default: TransactionSortBy.DATE,
+    description: 'Field used to sort transactions',
+  })
+  @IsOptional()
+  @IsEnum(TransactionSortBy, {
+    message: 'Sort by must be one of: date, amount, createdAt',
+  })
+  sortBy: TransactionSortBy = TransactionSortBy.DATE;
+
+  @ApiPropertyOptional({
+    enum: SortOrder,
+    example: SortOrder.DESC,
+    default: SortOrder.DESC,
+    description: 'Transaction sort direction',
+  })
+  @IsOptional()
+  @IsEnum(SortOrder, { message: 'Sort order must be either asc or desc' })
+  sortOrder: SortOrder = SortOrder.DESC;
 }
