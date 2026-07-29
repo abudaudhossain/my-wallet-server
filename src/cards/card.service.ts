@@ -13,6 +13,10 @@ export class CardService {
     const card = await this.cardRepository.create({
       name: dto.name,
       description: dto.description,
+      lastFour: dto.lastFour,
+      expires: dto.expires,
+      network: dto.network,
+      colors: dto.colors,
       user: { connect: { id: userId } },
     });
 
@@ -41,6 +45,10 @@ export class CardService {
       {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.lastFour !== undefined && { lastFour: dto.lastFour }),
+        ...(dto.expires !== undefined && { expires: dto.expires }),
+        ...(dto.network !== undefined && { network: dto.network }),
+        ...(dto.colors !== undefined && { colors: dto.colors }),
       },
     );
 

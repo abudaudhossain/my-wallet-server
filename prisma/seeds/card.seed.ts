@@ -28,6 +28,10 @@ export class CardSeeder {
     const cardsToCreate: Array<{
       name: string;
       description: string;
+      lastFour: string;
+      expires: string;
+      network: string;
+      colors: string;
       userId: number;
     }> = [];
 
@@ -40,6 +44,10 @@ export class CardSeeder {
         cardsToCreate.push({
           name: profile.name,
           description: profile.description,
+          lastFour: profile.lastFour,
+          expires: profile.expires,
+          network: profile.network,
+          colors: profile.colors,
           userId: user.id,
         });
       }

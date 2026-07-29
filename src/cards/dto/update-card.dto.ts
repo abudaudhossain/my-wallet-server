@@ -24,4 +24,28 @@ export class UpdateCardDto {
   @IsString({ message: 'Description must be a string' })
   @MaxLength(500, { message: 'Description must not exceed 500 characters' })
   description?: string;
+
+  @ApiPropertyOptional({ example: '4242' })
+  @IsOptional()
+  @IsString({ message: 'Last four must be a string' })
+  @IsNotEmpty({ message: 'Last four is required' })
+  lastFour?: string;
+
+  @ApiPropertyOptional({ example: '12/29' })
+  @IsOptional()
+  @IsString({ message: 'Expires must be a string' })
+  @IsNotEmpty({ message: 'Expires is required' })
+  expires?: string;
+
+  @ApiPropertyOptional({ example: 'Visa' })
+  @IsOptional()
+  @IsString({ message: 'Network must be a string' })
+  @IsNotEmpty({ message: 'Network is required' })
+  network?: string;
+
+  @ApiPropertyOptional({ example: 'from-lime-300 via-emerald-400 to-teal-500' })
+  @IsOptional()
+  @IsString({ message: 'Colors must be a string' })
+  @IsNotEmpty({ message: 'Colors is required' })
+  colors?: string;
 }
